@@ -96,5 +96,4 @@ def main():
         else:
             conn.commit()
             print("Account created successfully.")
-
-    
+            
