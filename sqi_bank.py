@@ -41,7 +41,12 @@ def main():
 
     def register():
         while True:
-            fullname = input("Enter your Full name: ")
+            firstname = input("Enter your Firstname: ").strip().capitalize()
+            lastname = input("Enter your Last name: ").strip().capitalize()
+            if not firstname.isalpha() or not lastname.isalpha():
+                print("Invalid name! Only letter are allowed.")
+                continue
+            fullname = lastname + " " +  firstname           
             if not fullname:
                 print("Full name can't be blank")
                 continue
@@ -53,7 +58,7 @@ def main():
                 continue
             break
         while True:
-            username = input("Enter your user name: ")
+            username = input("Enter your user name: ").strip()
             if not username:
                 print("User name can't be blank")
                 continue
@@ -71,7 +76,7 @@ def main():
                 continue
             break
         while True:
-            password = getpass("Enter your password: ")
+            password = getpass("Enter your password: ").strip()
             if not password:
                 print("Password can't be blank")
                 continue
@@ -90,11 +95,17 @@ def main():
         hashed_password = hashlib.sha256(password.encode()).hexdigest()
 
         while True:
-            initial_deposit = float(input("Enter your first deposit: "))
-            if initial_deposit < 2000:
-                print("Initial deposit must be at least 2000")
+            try:
+                initial_deposit = float(input("Enter your first deposit: "))
+            except ValueError as e:
+                print(f"Invalid amount. Please enter a number.{e}")
                 continue
-            break
+            else:
+                if initial_deposit < 2000:
+                    print("Initial deposit must be at least ₦2000")
+                    continue
+                print(f"Your initial deposit is ₦{initial_deposit}")
+                break
 
 
         while True:
@@ -120,14 +131,14 @@ def main():
         print("\n\n*************Log In****************")
 
         while True:
-            username = input("Enter your username: ")
+            username = input("Enter your username: ").strip()
             if not username:
                 print("Username can't be blank")
                 continue
             break
 
         while True:
-            password = getpass("Enter your password: ")
+            password = getpass("Enter your password: ").strip()
             if not password:
                 print("Password can't be blank")
                 continue
@@ -160,7 +171,7 @@ def main():
                 SELECT transaction_type, amount, timestamp 
                 FROM transactions 
                 WHERE user_id = ? 
-                ORDER BY timestamp DESC
+                ORDER BY timestamp  DESC
             """, (user_id,))
             transactions = cursor.fetchall()
 
@@ -178,11 +189,16 @@ def main():
                 print(main_menu)
                 choice = input("Choose an option from the menu above: ")
                 if choice == "1":
-                    deposit_amount = (float(input("Enter amount to deposit: ")))
-                    if deposit_amount <= 0:
-                        print("Amount must be greater than 0.")
+                    try:
+                        deposit_amount = (float(input("Enter amount to deposit: ")))
+                    except ValueError as e:
+                        print(f"Invalid amount. Please enter a number.{e}")
                         continue
-                    balance += deposit_amount
+                    else:
+                        if deposit_amount <= 0:
+                            print("Amount must be greater than 0.")
+                            continue
+                        balance += deposit_amount
 
                     cursor.execute("UPDATE users SET balance = ? WHERE id = ?", (balance, user_id))
                     cursor.execute("INSERT INTO transactions(transaction_type, amount, user_id)VALUES (?,?,?)",('Deposit', deposit_amount, user_id))
@@ -190,13 +206,19 @@ def main():
                     print(f"Deposit successful. New balance: ₦{balance}")
 
                 elif choice == "2":
-                    withdrawal_amount = float(input("Enter an amount to withdraw: "))
-                    if withdrawal_amount <= 0:
-                        print("Withdrawal amount must be greater than 0.")
-                    elif withdrawal_amount > balance:
-                        print(f"Insufficient funds. Your current balance is ₦{balance}")
+                    try:
+                        withdrawal_amount = float(input("Enter an amount to withdraw: "))
+                    except ValueError as e:
+                        print(f"Invalid amount. Please enter a number.{e}")
+                        continue
                     else:
-                        balance -= withdrawal_amount
+                        if withdrawal_amount <= 0:
+                            print("Withdrawal amount must be greater than 0.")
+                            continue
+                        elif withdrawal_amount > balance:
+                            print(f"Insufficient funds. Your current balance is ₦{balance}")
+                        else:
+                            balance -= withdrawal_amount
                         cursor.execute("UPDATE users SET balance = ? WHERE id = ?", (balance, user_id))
                         cursor.execute("INSERT INTO transactions(transaction_type, amount, user_id)VALUES (?,?,?)",('Withdraw', withdrawal_amount, user_id))
 
@@ -206,37 +228,42 @@ def main():
                         print(f"New balance: ₦{balance}")
                 
                 elif choice == "3":
-                    print(f"Your available balance is ₦{balance}")
+                    print(f"Your available balance is ₦{balance:.2f}")
                 elif choice == "4":
                     transaction_history(user_id)
 
                 elif choice == "5":
-                    account_number = input("Enter account number: ")
-                    if account_number in user:
-                        print("You can't send money to your self")
+                    try:
+                        account_number = input("Enter account number: ").strip()
+                    except ValueError as e:
+                        print(f"Invalid amount. Please enter a number.{e}")
                         continue
-                    recipient = cursor.execute("SELECT * FROM users WHERE account_number = ?", (account_number,)).fetchone()
-                    if recipient:
-                        amount = float(input("Enter amount: "))
-                        if amount <= 0: 
-                            print("Amount must be greater than 0.")
-                        elif amount > balance:
-                            print(f"Insufficient funds. Your current balance is ₦{balance:.2f}.")
-                        else:
-                            balance -= amount
-                            cursor.execute("UPDATE users SET balance = ? WHERE id = ?", (balance, user_id))
-                            recipient_balance = recipient[4] + amount  
-                            cursor.execute("UPDATE users SET balance = ? WHERE id = ?", (recipient_balance, recipient[0])) 
-                            cursor.execute("INSERT INTO transactions(transaction_type, amount, user_id)VALUES (?,?,?)",('Transfer', amount ,user_id))
-
-                            conn.commit()
-                            print(f"₦{amount:.2f} sent successfully.")
-                            print(f"New balance: ₦{balance:.2f}")
                     else:
-                        print("Account number does not exist")
-                        continue
+                        if account_number in user:
+                            print("You can't send money to your self")
+                            continue
+                        recipient = cursor.execute("SELECT * FROM users WHERE account_number = ?", (account_number,)).fetchone()
+                        if recipient:
+                            amount = float(input("Enter amount: "))
+                            if amount <= 0: 
+                                print("Amount must be greater than 0.")
+                            elif amount > balance:
+                                print(f"Insufficient funds. Your current balance is ₦{balance:.2f}.")
+                            else:
+                                balance -= amount
+                                cursor.execute("UPDATE users SET balance = ? WHERE id = ?", (balance, user_id))
+                                recipient_balance = recipient[4] + amount  
+                                cursor.execute("UPDATE users SET balance = ? WHERE id = ?", (recipient_balance, recipient[0])) 
+                                cursor.execute("INSERT INTO transactions(transaction_type, amount, user_id)VALUES (?,?,?)",('Transfer', amount ,user_id))
+
+                                conn.commit()
+                                print(f"₦{amount:.2f} sent successfully. Your new balance is ₦{balance:.2f}")
+                                # print(f"New balance: ₦{balance:.2f}")
+                        else:
+                            print("Account number does not exist")
+                            continue
                 elif choice == "6":
-                    print(f"Fullname: {fullname}, Username: {username}, Balance: {balance}, Account number: {account_number} ")
+                    print(f"Fullname: {fullname}, Username: {username}, Balance: ₦{balance:.2f}, Account number: {account_number} ")
                 elif choice == "7":
                     print("Thank you for banking with us")
                     break
